@@ -36,12 +36,8 @@ from matplotlib.lines import Line2D
 # 1. CONFIGURATION
 # ============================================================
 
-TOTAL_M = int(input("Enter number of missionaries: "))
-TOTAL_C = int(input("Enter number of cannibals: "))
-BOAT_CAPACITY = int(input("Enter boat capacity: "))
-
-if TOTAL_M < 0 or TOTAL_C < 0 or BOAT_CAPACITY < 1:
-    raise ValueError("Counts cannot be negative and boat capacity must be at least 1.")
+# Default puzzle. main() changes it through configure().
+TOTAL_M, TOTAL_C, BOAT_CAPACITY = 3, 3, 2
 
 # State = (missionaries on left, cannibals on left, boat side)
 # Boat: 0 = left bank, 1 = right bank
@@ -105,17 +101,45 @@ def valid(state):
 
 
 # Every possible non-empty boat load of at most two people.
-LOADS = sorted(
-    [
-        (m, c)
-        for m in range(BOAT_CAPACITY + 1)
-        for c in range(BOAT_CAPACITY + 1)
-        if 1 <= m + c <= BOAT_CAPACITY
-    ],
-    key=lambda item: (sum(item), item[0]),
-    reverse=True,
-)
+# LOADS = sorted(
+#     [
+#         (m, c)
+#         for m in range(BOAT_CAPACITY + 1)
+#         for c in range(BOAT_CAPACITY + 1)
+#         if 1 <= m + c <= BOAT_CAPACITY
+#     ],
+#     key=lambda item: (sum(item), item[0]),
+#     reverse=True,
+# )
+def make_loads():
+    """Every non-empty boat load that fits in the boat."""
+    return sorted(
+        [
+            (m, c)
+            for m in range(BOAT_CAPACITY + 1)
+            for c in range(BOAT_CAPACITY + 1)
+            if 1 <= m + c <= BOAT_CAPACITY
+        ],
+        key=lambda item: (sum(item), item[0]),
+        reverse=True,
+    )
 
+
+LOADS = make_loads()
+
+def configure(m, c, capacity):
+    """Set the puzzle size. Call this before bfs()."""
+    global TOTAL_M, TOTAL_C, BOAT_CAPACITY, START, GOAL, LOADS
+
+    if m < 0 or c < 0 or capacity < 1:
+        raise ValueError(
+            "Counts cannot be negative and boat capacity must be at least 1."
+        )
+
+    TOTAL_M, TOTAL_C, BOAT_CAPACITY = m, c, capacity
+    START = (m, c, 0)
+    GOAL = (0, 0, 1)
+    LOADS = make_loads()
 
 def successors(state):
     """Return every legal next state and its crossing description."""
@@ -157,8 +181,6 @@ def bfs():
         current = queue.popleft()
         explored.append(current)
 
-        if current == GOAL:
-            break
 
         for nxt, move in successors(current):
             if nxt in visited:
@@ -173,7 +195,7 @@ def bfs():
             queue.append(nxt)
 
     if GOAL not in parent:
-        raise RuntimeError("BFS could not find a solution.")
+        return None
 
     # Reconstruct shortest path using parent pointers.
     path = []
@@ -200,7 +222,7 @@ def bfs():
 # ============================================================
 
 def make_graph(discovery):
-    graph = nx.DiGraph()
+    graph = nx.Graph()
     discovered = set(discovery)
 
     for state in discovery:
@@ -704,9 +726,22 @@ def create_animation(path, moves):
         # People change banks only after the boat arrives.
         displayed_state = end_state if alpha >= 1.0 else start_state
 
+        # m_left, c_left, _ = displayed_state
+        # m_right = TOTAL_M - m_left
+        # c_right = TOTAL_C - c_left
+
+        bm = abs(start_state[0] - end_state[0])
+        bc = abs(start_state[1] - end_state[1])
+
         m_left, c_left, _ = displayed_state
         m_right = TOTAL_M - m_left
         c_right = TOTAL_C - c_left
+
+        if alpha < 1.0:                      # people on the boat are on neither bank
+            if start_state[2] == 0:          # boat leaves the left bank
+                m_left, c_left = m_left - bm, c_left - bc
+            else:                            # boat leaves the right bank
+                m_right, c_right = m_right - bm, c_right - bc
 
         def draw_bank(m_count, c_count, center):
             # positions = [
@@ -775,9 +810,7 @@ def create_animation(path, moves):
             [5.52 + dx, 1.7],
         ])
 
-        # Determine passengers from the difference between states.
-        bm = abs(start_state[0] - end_state[0])
-        bc = abs(start_state[1] - end_state[1])
+        # Passengers: the people on the boat during a crossing.
 
         passenger_colors = [BLUE] * bm + [ORANGE] * bc
 
@@ -794,9 +827,14 @@ def create_animation(path, moves):
 
         crossing_number = min(crossing_index + 1, len(path) - 1)
 
+        in_m = bm if alpha < 1.0 else 0
+        in_c = bc if alpha < 1.0 else 0
+
         status.set_text(
             f"Crossing {crossing_number} / {len(path) - 1}"
-            f"   |   {description(displayed_state)}"
+            f"   |   Left: {m_left}M, {c_left}C"
+            f" | Right: {m_right}M, {c_right}C"
+            f" | In boat: {in_m}M, {in_c}C"
         )
 
         if frame == 0:
@@ -920,7 +958,24 @@ def print_solution(path, moves, explored, depth):
 # ============================================================
 
 def main():
-    path, moves, explored, parent, discovery, depth = bfs()
+    configure(
+        int(input("Enter number of missionaries: ")),
+        int(input("Enter number of cannibals: ")),
+        int(input("Enter boat capacity: ")),
+    )
+
+    if not valid(START):
+        print("\nThe puzzle starts in an unsafe position: "
+              "cannibals outnumber missionaries on the left bank.")
+        return
+
+    result = bfs()
+
+    if result is None:
+        print("\nNo solution exists for these numbers.")
+        return
+
+    path, moves, explored, parent, discovery, depth = result
 
     print_solution(path, moves, explored, depth)
 

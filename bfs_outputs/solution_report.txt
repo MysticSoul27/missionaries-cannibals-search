@@ -48,3 +48,4 @@ BFS EXPLORATION ORDER
 13. (1,1,L) | depth=10 | Left: 1M, 1C | Right: 2M, 2C | Boat: Left
 14. (0,2,L) | depth=10 | Left: 0M, 2C | Right: 3M, 1C | Boat: Left
 15. (0,0,R) | depth=11 | Left: 0M, 0C | Right: 3M, 3C | Boat: Right
+16. (0,1,L) | depth=12 | Left: 0M, 1C | Right: 3M, 2C | Boat: Left
