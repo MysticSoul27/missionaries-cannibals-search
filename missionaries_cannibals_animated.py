@@ -36,13 +36,16 @@ from matplotlib.lines import Line2D
 # 1. CONFIGURATION
 # ============================================================
 
-TOTAL_M = 3
-TOTAL_C = 3
-BOAT_CAPACITY = 2
+TOTAL_M = int(input("Enter number of missionaries: "))
+TOTAL_C = int(input("Enter number of cannibals: "))
+BOAT_CAPACITY = int(input("Enter boat capacity: "))
+
+if TOTAL_M < 0 or TOTAL_C < 0 or BOAT_CAPACITY < 1:
+    raise ValueError("Counts cannot be negative and boat capacity must be at least 1.")
 
 # State = (missionaries on left, cannibals on left, boat side)
 # Boat: 0 = left bank, 1 = right bank
-START = (3, 3, 0)
+START = (TOTAL_M, TOTAL_C, 0)
 GOAL = (0, 0, 1)
 
 OUTPUT = Path("bfs_outputs")
@@ -501,8 +504,12 @@ def draw_crossing_chart(path):
     ax.set_xlabel("State / crossing number")
     ax.set_ylabel("People on left bank")
     ax.set_xticks(steps)
-    ax.set_yticks(range(4))
-    ax.set_ylim(-0.2, 3.3)
+    # ax.set_yticks(range(4))
+    # ax.set_ylim(-0.2, 3.3)
+    max_people = max(TOTAL_M, TOTAL_C)
+
+    ax.set_yticks(range(max_people + 1))
+    ax.set_ylim(-0.2, max_people + 0.3)
     ax.grid(alpha=0.25, linestyle="--")
     ax.legend()
 
@@ -651,10 +658,17 @@ def create_animation(path, moves):
     ax.add_patch(sail)
 
     # Passenger circles are reused rather than recreated.
+    
     passengers = [
-        Circle((4.9, 1.78), 0.075, color=BLUE, zorder=8),
-        Circle((5.32, 1.78), 0.075, color=ORANGE, zorder=8),
-    ]
+      Circle(
+        (4.9 + j * 0.42, 1.78),
+        0.075,
+        color=BLUE,
+        zorder=8
+    )
+    for j in range(BOAT_CAPACITY)
+  ]
+
 
     for passenger in passengers:
         ax.add_patch(passenger)
@@ -695,10 +709,16 @@ def create_animation(path, moves):
         c_right = TOTAL_C - c_left
 
         def draw_bank(m_count, c_count, center):
+            # positions = [
+            #     center - 0.55,
+            #     center,
+            #     center + 0.55,
+            # ]
+            spacing = min(0.55, 2.0 / max(m_count, c_count, 1))
+
             positions = [
-                center - 0.55,
-                center,
-                center + 0.55,
+                center + (j - (max(m_count, c_count, 1) - 1) / 2) * spacing
+                for j in range(max(m_count, c_count, 1))
             ]
 
             for j in range(m_count):
