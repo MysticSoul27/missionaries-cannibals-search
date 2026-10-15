@@ -206,4 +206,4 @@ By completing this project, students can understand:
 - Display the explored states interactively.
 - Add an interactive game mode.
 
-This project is intended for educational and academic purposes. You may add an open-source license, such as the MIT License, if you want to permit reuse under its terms.
+
